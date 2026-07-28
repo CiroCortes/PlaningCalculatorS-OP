@@ -1,0 +1,25 @@
+# Entorno Virtual Python
+venv/
+env/
+ENV/
+
+# Byte-compiled / archivos temporales Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Variables de entorno secretas
+.env
+
+# Base de datos SQLite local
+*.sqlite3
+*.sqlite3-journal
+
+# Archivos pesados o descargas Excel locales de prueba (mantenemos el original)
+scratch/
+*.log
+
+# IDEs y Editores
+.vscode/
+.idea/
+*.swp
