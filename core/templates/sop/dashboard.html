@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="es" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S&OP Planning & Decisions - PESCO S.A.</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        pesco: {
+                            blue: '#00A8FF',
+                            blueHover: '#008CD7',
+                            red: '#E30613',
+                            redHover: '#C40410',
+                            yellow: '#FFC700',
+                            dark: '#111827',
+                            cardDark: '#1E293B',
+                            lightBg: '#F8FAFC',
+                            cardLight: '#FFFFFF',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts: Outfit -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-pesco-lightBg dark:bg-pesco-dark text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-300">
+
+    <!-- Header / Navbar Principal PESCO -->
+    <header class="bg-pesco-blue dark:bg-slate-900 border-b border-blue-400 dark:border-slate-800 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-3.5 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+            <!-- Branding -->
+            <div class="flex items-center space-x-3">
+                <div class="bg-white p-1.5 rounded shadow-sm">
+                    <span class="text-pesco-blue font-extrabold text-2xl tracking-wider">PESCO</span>
+                </div>
+                <div>
+                    <span class="text-white font-bold text-lg leading-tight block">S&OP Planning System</span>
+                    <span class="text-blue-100 text-xs block">Vamos Contigo • Matrix Consolidada</span>
+                </div>
+            </div>
+            
+            <!-- Acciones Rápidas y Cambio de Rol -->
+            <div class="flex flex-wrap items-center justify-center gap-3">
+                
+                <!-- Selector de Rol (Simulación en Vivo para Demos) -->
+                <div class="flex items-center bg-blue-600 dark:bg-slate-800 rounded-lg p-1 border border-blue-400 dark:border-slate-700">
+                    <a href="?role=planner" class="px-3 py-1.5 rounded-md text-xs font-bold transition-all {% if active_role == 'planner' %}bg-white text-pesco-blue shadow-sm{% else %}text-white hover:bg-blue-700{% endif %}">
+                        Planificador
+                    </a>
+                    <a href="?role=requester" class="px-3 py-1.5 rounded-md text-xs font-bold transition-all {% if active_role == 'requester' %}bg-white text-pesco-blue shadow-sm{% else %}text-white hover:bg-blue-700{% endif %}">
+                        Solicitante
+                    </a>
+                </div>
+
+                {% if active_role == 'planner' %}
+                <!-- Botón de Carga Única (Solo visible para Planificador) -->
+                <form method="POST" enctype="multipart/form-data" id="upload-form" class="inline-block">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="upload_excel" />
+                    <label class="bg-pesco-red hover:bg-pesco-redHover text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-md transition-colors cursor-pointer inline-flex items-center space-x-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                        <span>Subir SAP Excel</span>
+                        <input type="file" name="excel_file" accept=".xlsx, .xlsm" class="hidden" onchange="document.getElementById('upload-form').submit()" />
+                    </label>
+                </form>
+                {% endif %}
+
+                <!-- Selector de Marca -->
+                <select class="bg-white dark:bg-slate-800 text-slate-800 dark:text-white border border-slate-300 dark:border-slate-700 px-3 py-2 rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-pesco-blue">
+                    <option value="hiab">Marca: HIAB (Grúas)</option>
+                    <option value="terex" disabled>Marca: TEREX (Emergencia)</option>
+                    <option value="multilift" disabled>Marca: MULTILIFT (Ganchos)</option>
+                </select>
+
+                <!-- Conmutador Claro/Oscuro -->
+                <button id="theme-toggle" class="p-2 bg-blue-600 dark:bg-slate-800 hover:bg-blue-700 dark:hover:bg-slate-700 text-white rounded-lg transition-colors focus:outline-none">
+                    <svg id="theme-toggle-light-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.46 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"></path></svg>
+                    <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Contenedor Principal -->
+    <main class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 space-y-6">
+
+        <!-- Banner de estado de la planilla -->
+        {% if file_name %}
+        <div class="p-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg text-sm text-green-700 dark:text-green-300 flex items-center space-x-2">
+            <svg class="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+            <span>Planilla S&OP cargada en sistema: <strong>{{ file_name }}</strong></span>
+        </div>
+        {% endif %}
+
+        {% if error %}
+        <div class="p-4 bg-red-50 dark:bg-red-950/20 border-l-4 border-pesco-red text-red-700 dark:text-red-300 rounded-r-lg">
+            <p class="font-bold">Error:</p>
+            <p class="text-sm">{{ error }}</p>
+        </div>
+        {% endif %}
+
+        <!-- VISTA DEL PLANIFICADOR (ADMIN) -->
+        {% if active_role == 'planner' %}
+            {% if success and metrics %}
+            
+            <!-- 1. HOJA RESUMEN GENERAL (CONSOLIDADO) -->
+            <section id="consolidated-dashboard" class="bg-pesco-cardLight dark:bg-pesco-cardDark rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 p-6 transition-colors duration-300">
+                <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4 mb-6">
+                    <h2 class="text-xl font-bold tracking-tight text-slate-800 dark:text-slate-100 flex items-center space-x-2">
+                        <span class="w-2.5 h-6 bg-pesco-blue rounded-full"></span>
+                        <span id="dashboard-title">Consolidado General S&OP - Marca HIAB</span>
+                    </h2>
+                    <button onclick="resetToGlobal()" id="btn-back-global" class="hidden bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-350 px-3 py-1 rounded text-xs font-bold hover:bg-pesco-blue hover:text-white transition-colors">
+                        Volver a Vista Consolidada
+                    </button>
+                </div>
+
+                <!-- Tablas de Resumen Lado a Lado -->
+                <div class="grid grid-cols-1 lg:grid-cols-7 gap-6 items-stretch">
+                    
+                    <!-- Tabla Izquierda: Demanda y KPIs -->
+                    <div class="lg:col-span-3 space-y-4">
+                        <div class="bg-slate-50 dark:bg-slate-900/50 rounded-lg p-4 border border-slate-200 dark:border-slate-800">
+                            <table class="w-full text-sm">
+                                <thead>
+                                    <tr class="text-xs font-semibold text-slate-400 border-b border-slate-200 dark:border-slate-800 pb-2">
+                                        <th class="text-left py-2">Demanda y Objetivos</th>
+                                        <th class="text-center py-2 px-2">Moneda</th>
+                                        <th class="text-right py-2">Dinero (USD)</th>
+                                        <th class="text-right py-2">Cantidad (u)</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
+                                    <tr>
+                                        <td class="py-2 text-slate-600 dark:text-slate-300">Entregado últimos 12 meses</td>
+                                        <td class="text-center text-slate-400 text-xs py-2">USD</td>
+                                        <td id="cell-del-12m-val" class="text-right font-semibold py-2">{{ metrics.global.demand.delivered_12m_val|floatformat:0 }}</td>
+                                        <td id="cell-del-12m-qty" class="text-right font-bold text-pesco-blue py-2">{{ metrics.global.demand.delivered_12m_qty }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-2 text-slate-600 dark:text-slate-300">Entregado 2026</td>
+                                        <td class="text-center text-slate-400 text-xs py-2">USD</td>
+                                        <td id="cell-del-2026_val" class="text-right font-semibold py-2">{{ metrics.global.demand.delivered_2026_val|floatformat:0 }}</td>
+                                        <td id="cell-del-2026_qty" class="text-right font-bold text-pesco-blue py-2">{{ metrics.global.demand.delivered_2026_qty }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-2 text-slate-600 dark:text-slate-300">Backlog (Abril)</td>
+                                        <td class="text-center text-slate-400 text-xs py-2">USD</td>
+                                        <td id="cell-backlog-val" class="text-right font-semibold py-2">{{ metrics.global.demand.backlog_val|floatformat:0 }}</td>
+                                        <td id="cell-backlog-qty" class="text-right font-bold text-pesco-blue py-2">{{ metrics.global.demand.backlog_qty }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-2 text-slate-600 dark:text-slate-300">Cotizado (NEC 3)</td>
+                                        <td class="text-center text-slate-400 text-xs py-2">USD</td>
+                                        <td id="cell-cotizado-val" class="text-right font-semibold py-2">{{ metrics.global.demand.cotizado_val|floatformat:0 }}</td>
+                                        <td id="cell-cotizado-qty" class="text-right font-bold text-pesco-blue py-2">{{ metrics.global.demand.cotizado_qty }}</td>
+                                    </tr>
+                                    <tr class="bg-blue-50/40 dark:bg-blue-950/10">
+                                        <td class="py-2.5 font-bold text-slate-700 dark:text-slate-200">Presupuesto 2026</td>
+                                        <td class="text-center text-slate-400 text-xs py-2">USD</td>
+                                        <td id="cell-budget-val" class="text-right font-extrabold py-2">{{ metrics.global.demand.budget_val|floatformat:0 }}</td>
+                                        <td id="cell-budget-qty" class="text-right font-extrabold text-pesco-blue py-2">{{ metrics.global.demand.budget_qty }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-2 text-slate-600 dark:text-slate-300" colspan="2">Cumplimiento presupuesto (Cantidad)</td>
+                                        <td id="cell-compliance-qty" class="text-right font-bold text-pesco-red py-2" colspan="2">{{ metrics.global.demand.budget_compliance_qty|floatformat:2 }}%</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-2 text-slate-600 dark:text-slate-300" colspan="2">Cumplimiento presupuesto (Dinero)</td>
+                                        <td id="cell-compliance-val" class="text-right font-bold text-pesco-red py-2" colspan="2">{{ metrics.global.demand.budget_compliance_val|floatformat:2 }}%</td>
+                                    </tr>
+                                    <tr class="border-t border-slate-300 dark:border-slate-700">
+                                        <td class="py-2 font-bold text-slate-700 dark:text-slate-200" colspan="2">Rotación (últimos 12 meses)</td>
+                                        <td id="cell-rot-std" class="text-right font-extrabold text-emerald-500 py-2" colspan="2">{{ metrics.global.demand.rotation_months }} meses</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-2 font-bold text-slate-700 dark:text-slate-200" colspan="2">Rotación (12 meses) + solicitud</td>
+                                        <td id="cell-rot-pur" class="text-right font-extrabold text-emerald-500 py-2" colspan="2">{{ metrics.global.demand.rotation_with_purchase_months|floatformat:2 }} meses</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Logo e Indicador Central -->
+                    <div class="lg:col-span-1 flex flex-col items-center justify-center border-y lg:border-y-0 lg:border-x border-slate-200 dark:border-slate-800 py-6 lg:py-0">
+                        <div class="text-center space-y-4">
+                            <div class="w-16 h-16 bg-pesco-blue/10 rounded-full flex items-center justify-center mx-auto text-pesco-blue">
+                                <span class="text-2xl font-black">P</span>
+                            </div>
+                            <div id="central-brand-badge" class="bg-pesco-red text-white text-xs font-bold px-3 py-1.5 rounded tracking-widest shadow-sm">
+                                HIAB
+                            </div>
+                            <span id="central-sub-badge" class="text-slate-400 text-[10px] uppercase font-bold tracking-wider block">Línea Activa</span>
+                        </div>
+                    </div>
+
+                    <!-- Tabla Derecha: Inventario y Suministro -->
+                    <div class="lg:col-span-3 space-y-4">
+                        <div class="bg-slate-50 dark:bg-slate-900/50 rounded-lg p-4 border border-slate-200 dark:border-slate-800">
+                            <table class="w-full text-sm">
+                                <thead>
+                                    <tr class="text-xs font-semibold text-slate-400 border-b border-slate-200 dark:border-slate-800 pb-2">
+                                        <th class="text-left py-2">Inventario y Suministro</th>
+                                        <th class="text-center py-2 px-2">Moneda</th>
+                                        <th class="text-right py-2">Dinero (USD)</th>
+                                        <th class="text-right py-2">Cantidad (u)</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
+                                    <tr>
+                                        <td class="py-2 text-slate-600 dark:text-slate-300">Stock (+)</td>
+                                        <td class="text-center text-slate-400 text-xs py-2">USD</td>
+                                        <td id="cell-stock-val" class="text-right font-semibold py-2">{{ metrics.global.inventory.stock_val|floatformat:0 }}</td>
+                                        <td id="cell-stock-qty" class="text-right font-bold text-pesco-blue py-2">{{ metrics.global.inventory.stock_qty }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-2 text-slate-600 dark:text-slate-300">Tránsito real (+)</td>
+                                        <td class="text-center text-slate-400 text-xs py-2">USD</td>
+                                        <td id="cell-transit-val" class="text-right font-semibold py-2">{{ metrics.global.inventory.transit_real_val|floatformat:0 }}</td>
+                                        <td id="cell-transit-qty" class="text-right font-bold text-pesco-blue py-2">{{ metrics.global.inventory.transit_real_qty }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-2 text-slate-600 dark:text-slate-300">Tránsito proyectado (+)</td>
+                                        <td class="text-center text-slate-400 text-xs py-2">USD</td>
+                                        <td id="cell-transit-proj-val" class="text-right font-semibold py-2">{{ metrics.global.inventory.transit_proj_val|floatformat:0 }}</td>
+                                        <td id="cell-transit-proj-qty" class="text-right font-bold text-pesco-blue py-2">{{ metrics.global.inventory.transit_proj_qty }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-2 text-slate-600 dark:text-slate-300">En proceso (+)</td>
+                                        <td class="text-center text-slate-400 text-xs py-2">USD</td>
+                                        <td id="cell-process-val" class="text-right font-semibold py-2">{{ metrics.global.inventory.process_val|floatformat:0 }}</td>
+                                        <td id="cell-process-qty" class="text-right font-bold text-pesco-blue py-2">{{ metrics.global.inventory.process_qty }}</td>
+                                    </tr>
+                                    <tr class="bg-blue-50/40 dark:bg-blue-950/10 font-bold border-t border-slate-300 dark:border-slate-700">
+                                        <td class="py-2 text-slate-800 dark:text-slate-200">Inventario inicial</td>
+                                        <td class="text-center text-slate-400 text-xs py-2">USD</td>
+                                        <td id="cell-init-val" class="text-right font-extrabold py-2">{{ metrics.global.inventory.initial_inventory_val|floatformat:0 }}</td>
+                                        <td id="cell-init-qty" class="text-right font-extrabold text-pesco-blue py-2">{{ metrics.global.inventory.initial_inventory_qty }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-2 text-slate-600 dark:text-slate-300">Backlog (-)</td>
+                                        <td class="text-center text-slate-400 text-xs py-2">USD</td>
+                                        <td id="cell-backlog-minus-val" class="text-right font-semibold py-2">{{ metrics.global.inventory.backlog_minus_val|floatformat:0 }}</td>
+                                        <td id="cell-backlog-minus-qty" class="text-right font-bold text-pesco-blue py-2">{{ metrics.global.inventory.backlog_minus_qty }}</td>
+                                    </tr>
+                                    <tr class="bg-slate-100/60 dark:bg-slate-800/40 font-bold">
+                                        <td class="py-2 text-slate-850 dark:text-slate-150">Inventario final</td>
+                                        <td class="text-center text-slate-400 text-xs py-2">USD</td>
+                                        <td id="cell-final-val" class="text-right font-extrabold py-2">{{ metrics.global.inventory.final_inventory_val|floatformat:0 }}</td>
+                                        <td id="cell-final-qty" class="text-right font-extrabold text-pesco-blue py-2">{{ metrics.global.inventory.final_inventory_qty }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-2 text-slate-600 dark:text-slate-300">Solicitud de compras (+)</td>
+                                        <td class="text-center text-slate-400 text-xs py-2">USD</td>
+                                        <td id="cell-purchase-val" class="text-right font-semibold py-2">{{ metrics.inventory.purchase_val|default:metrics.global.inventory.purchase_val|floatformat:0 }}</td>
+                                        <td id="cell-purchase-qty" class="text-right font-bold text-pesco-blue py-2">{{ metrics.inventory.purchase_qty|default:metrics.global.inventory.purchase_qty }}</td>
+                                    </tr>
+                                    <tr class="bg-blue-100/20 dark:bg-blue-900/10 font-bold border-t-2 border-slate-300 dark:border-slate-700">
+                                        <td class="py-2.5 text-slate-900 dark:text-white">Inventario final proyectado</td>
+                                        <td class="text-center text-slate-400 text-xs py-2">USD</td>
+                                        <td id="cell-proj-val" class="text-right font-extrabold py-2">{{ metrics.global.inventory.final_projected_val|floatformat:0 }}</td>
+                                        <td id="cell-proj-qty" class="text-right font-extrabold text-pesco-blue py-2">{{ metrics.global.inventory.final_projected_qty }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- 2. TABLA DESGLOSE SKU A SKU (ELIMINAR ALUCINACIONES Y PERMITIR CLIC PARA RE-DIBUJAR DASHBOARD DEL SKU) -->
+            <section class="bg-pesco-cardLight dark:bg-pesco-cardDark border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-lg transition-colors duration-300">
+                <div class="flex flex-col md:flex-row items-start md:items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4 mb-4 gap-4">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center space-x-2">
+                            <span class="w-2.5 h-5 bg-pesco-blue rounded-full"></span>
+                            <span>Desglose de Métricas S&OP por Código (SKU)</span>
+                        </h3>
+                        <span class="text-xs text-slate-400 italic">Haz clic en cualquier fila para cargar su dashboard individual</span>
+                    </div>
+                    <div class="w-full md:w-80">
+                        <input type="text" id="sku-table-search" oninput="filterSkuTable()" placeholder="Buscar por SKU o descripción en tabla..." class="w-full bg-slate-50 dark:bg-slate-900 text-slate-850 dark:text-white border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-pesco-blue" />
+                    </div>
+                </div>
+                
+                <div class="overflow-x-auto max-h-96 scrollbar-thin">
+                    <table class="w-full text-xs text-left">
+                        <thead class="bg-slate-50 dark:bg-slate-900/60 text-slate-400 font-semibold uppercase sticky top-0">
+                            <tr>
+                                <th class="py-2.5 px-2">Código SKU</th>
+                                <th class="py-2.5 px-2">Descripción</th>
+                                <th class="py-2.5 px-2 text-right">Stock</th>
+                                <th class="py-2.5 px-2 text-right">Tránsito R.</th>
+                                <th class="py-2.5 px-2 text-right">Tránsito P.</th>
+                                <th class="py-2.5 px-2 text-right">En Proceso</th>
+                                <th class="py-2.5 px-2 text-right">Inv. Inicial</th>
+                                <th class="py-2.5 px-2 text-right">Entregados 12M</th>
+                                <th class="py-2.5 px-2 text-right">Presupuesto</th>
+                                <th class="py-2.5 px-2 text-right">Rotación</th>
+                                <th class="py-2.5 px-2 text-right">Rotación + Sol.</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
+                            {% for sku in metrics.skus %}
+                            <tr onclick="loadSkuFiche('{{ sku.code }}')" data-sku="{{ sku.code }}" data-desc="{{ sku.description }}" class="sku-row-item hover:bg-pesco-blue/10 cursor-pointer transition-colors">
+                                <td class="py-2.5 px-2 font-mono font-bold text-slate-700 dark:text-slate-350">{{ sku.code }}</td>
+                                <td class="py-2.5 px-2 text-slate-500 font-semibold truncate max-w-xs">{{ sku.description }}</td>
+                                <td class="py-2.5 px-2 text-right text-slate-600 dark:text-slate-400">{{ sku.inventory.stock_qty }}</td>
+                                <td class="py-2.5 px-2 text-right text-slate-600 dark:text-slate-400">{{ sku.inventory.transit_real_qty }}</td>
+                                <td class="py-2.5 px-2 text-right text-slate-600 dark:text-slate-400">{{ sku.inventory.transit_proj_qty }}</td>
+                                <td class="py-2.5 px-2 text-right text-slate-600 dark:text-slate-400">{{ sku.inventory.process_qty }}</td>
+                                <td class="py-2.5 px-2 text-right font-bold text-slate-800 dark:text-white">{{ sku.inventory.initial_inventory_qty }}</td>
+                                <td class="py-2.5 px-2 text-right font-bold text-slate-800 dark:text-white">{{ sku.demand.delivered_12m_qty }}</td>
+                                <td class="py-2.5 px-2 text-right text-slate-600 dark:text-slate-400">{{ sku.demand.budget_qty }}</td>
+                                <td class="py-2.5 px-2 text-right font-bold text-emerald-500">{{ sku.demand.rotation_months }}</td>
+                                <td class="py-2.5 px-2 text-right font-bold text-emerald-600">{{ sku.demand.rotation_with_purchase_months }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 3. BANDEJA DE CONTROL S&OP (ADMIN / PLANIFICADOR) -->
+            <section class="bg-pesco-cardLight dark:bg-pesco-cardDark border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-lg transition-colors duration-300">
+                <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4 mb-4">
+                    <h2 class="text-lg font-bold tracking-tight text-slate-800 dark:text-slate-100 flex items-center space-x-2">
+                        <span class="w-2.5 h-5 bg-pesco-yellow rounded-full"></span>
+                        <span>Bandeja de Decisiones S&OP - Aprobaciones de Compra</span>
+                    </h2>
+                    <span class="text-xs text-slate-400">Control de Planificación</span>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs text-left">
+                        <thead class="bg-slate-50 dark:bg-slate-900/50 text-slate-400 font-semibold uppercase">
+                            <tr>
+                                <th class="py-3 px-3">Fecha / Solicitante</th>
+                                <th class="py-3 px-3">Marca / Producto</th>
+                                <th class="py-3 px-3 text-right">Cant.</th>
+                                <th class="py-3 px-3 text-right">Unitario</th>
+                                <th class="py-3 px-3 text-right">Total USD</th>
+                                <th class="py-3 px-3 text-center">Estado S&OP</th>
+                                <th class="py-3 px-3">Planificación (Mes/Notas)</th>
+                                <th class="py-3 px-3 text-center">Acciones Planner</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
+                            {% for req in active_requests %}
+                            <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-900/20">
+                                <td class="py-3 px-3">
+                                    <span class="font-bold block text-slate-700 dark:text-slate-300">{{ req.requested_by }}</span>
+                                    <span class="text-[10px] text-slate-450 block">{{ req.created_at|date:"d M Y H:i" }}</span>
+                                </td>
+                                <td class="py-3 px-3 text-slate-600 dark:text-slate-400">
+                                    <span class="bg-slate-200 dark:bg-slate-850 px-1.5 py-0.5 rounded text-[10px] font-bold text-slate-500 mr-1">{{ req.product.brand.code }}</span>
+                                    <strong>{{ req.product.item_code }}</strong>
+                                    <span class="block text-[10px] text-slate-400 mt-0.5">{{ req.product.description|truncatechars:45 }}</span>
+                                </td>
+                                <td class="py-3 px-3 text-right font-bold text-slate-800 dark:text-white">{{ req.quantity }}</td>
+                                <td class="py-3 px-3 text-right text-slate-500">${{ req.unit_cost_usd|floatformat:0 }}</td>
+                                <td class="py-3 px-3 text-right font-bold text-pesco-blue">${{ req.total_cost_usd|floatformat:0 }}</td>
+                                <td class="py-3 px-3 text-center">
+                                    {% if req.status == 'PENDIENTE' %}
+                                    <span class="px-2 py-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-950/30 dark:text-yellow-400 rounded-full font-bold">Pendiente</span>
+                                    {% elif req.status == 'APROBADO' %}
+                                    <span class="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-950/30 dark:text-green-400 rounded-full font-bold">Aprobado</span>
+                                    {% else %}
+                                    <span class="px-2 py-1 bg-red-100 text-red-800 dark:bg-red-950/30 dark:text-red-400 rounded-full font-bold">Rechazado</span>
+                                    {% endif %}
+                                </td>
+                                <td class="py-3 px-3">
+                                    {% if req.planned_date or req.decision_note %}
+                                        {% if req.planned_date %}
+                                        <span class="block text-slate-700 dark:text-slate-300 font-semibold">Mes Compra: <strong class="text-emerald-500">{{ req.planned_date }}</strong></span>
+                                        {% endif %}
+                                        {% if req.decision_note %}
+                                        <span class="block text-[10px] text-slate-400 italic">"{{ req.decision_note }}"</span>
+                                        {% endif %}
+                                    {% else %}
+                                    <span class="text-slate-450 italic">Sin evaluar aún</span>
+                                    {% endif %}
+                                </td>
+                                <td class="py-3 px-3">
+                                    <form method="POST" class="flex flex-col gap-1.5 bg-slate-50 dark:bg-slate-900/60 p-2 rounded border border-slate-200 dark:border-slate-800">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="evaluate_request" />
+                                        <input type="hidden" name="request_id" value="{{ req.id }}" />
+                                        
+                                        <div class="grid grid-cols-2 gap-1.5">
+                                            <select name="status" class="bg-white dark:bg-slate-800 text-[10px] border border-slate-200 rounded px-1 py-0.5 focus:outline-none">
+                                                <option value="APROBADO" {% if req.status == 'APROBADO' %}selected{% endif %}>Aprobar</option>
+                                                <option value="RECHAZADO" {% if req.status == 'RECHAZADO' %}selected{% endif %}>Rechazar</option>
+                                                <option value="PENDIENTE" {% if req.status == 'PENDIENTE' %}selected{% endif %}>Pendiente</option>
+                                            </select>
+                                            <input type="text" name="planned_date" placeholder="Mes (Ej: Octubre)" value="{{ req.planned_date|default:'' }}" class="bg-white dark:bg-slate-800 text-[10px] border border-slate-200 rounded px-1 py-0.5 focus:outline-none" />
+                                        </div>
+                                        <input type="text" name="decision_note" placeholder="Nota: 'Mantener rotación segura'" value="{{ req.decision_note|default:'' }}" class="bg-white dark:bg-slate-800 text-[10px] border border-slate-200 rounded px-1 py-0.5 focus:outline-none" />
+                                        
+                                        <div class="flex justify-between items-center mt-1">
+                                            <button type="submit" class="bg-pesco-blue hover:bg-pesco-blueHover text-white text-[9px] font-bold px-2 py-0.5 rounded">
+                                                Evaluar
+                                            </button>
+                                            <button type="submit" name="action" value="delete_request" class="text-pesco-red hover:underline text-[9px]">Eliminar</button>
+                                        </div>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td class="py-6 text-center text-slate-400" colspan="8">No hay solicitudes ingresadas.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 4. GRÁFICOS Y VISUALIZACIONES -->
+            <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-pesco-cardLight dark:bg-pesco-cardDark border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-lg transition-colors duration-300">
+                    <h3 class="text-md font-bold mb-4 text-slate-800 dark:text-slate-100 flex items-center space-x-2">
+                        <span class="w-2.5 h-4 bg-pesco-red rounded-full"></span>
+                        <span>Distribución de Inventario Inicial (Cantidad)</span>
+                    </h3>
+                    <div class="h-64 flex items-center justify-center">
+                        <canvas id="inventoryChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="bg-pesco-cardLight dark:bg-pesco-cardDark border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-lg transition-colors duration-300">
+                    <h3 class="text-md font-bold mb-4 text-slate-800 dark:text-slate-100 flex items-center space-x-2">
+                        <span class="w-2.5 h-4 bg-pesco-yellow rounded-full"></span>
+                        <span>Comparativa Demanda y Presupuesto (Cantidad)</span>
+                    </h3>
+                    <div class="h-64 flex items-center justify-center">
+                        <canvas id="demandChart"></canvas>
+                    </div>
+                </div>
+            </section>
+            {% endif %}
+        {% endif %}
+
+        <!-- SECCIÓN 5: VISTA DEL SOLICITANTE (USER NORMAL) -->
+        <!-- Visible para Solicitante o si no hay archivo subido aún -->
+        {% if active_role == 'requester' or not metrics %}
+        <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+            
+            <!-- Buscador y Agregador al Lote (1 de 3 columnas) -->
+            <div class="bg-pesco-cardLight dark:bg-pesco-cardDark border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-lg flex flex-col justify-between transition-colors duration-300">
+                <div>
+                    <h3 class="text-md font-bold mb-2 text-slate-800 dark:text-slate-100 flex items-center space-x-2">
+                        <span class="w-2.5 h-4 bg-pesco-red rounded-full"></span>
+                        <span>Buscar y Agregar Productos</span>
+                    </h3>
+                    <p class="text-xs text-slate-400 mb-4">Busca por código SAP o descripción, ingresa la cantidad y arma tu lote de solicitudes.</p>
+                    
+                    <div class="space-y-4">
+                        <div class="relative">
+                            <label class="block text-xs font-semibold text-slate-400 mb-1">Buscar Producto</label>
+                            <input type="text" id="sku-search" placeholder="Escribe código o nombre (Ej: HIAB 362)..." class="w-full bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pesco-blue" oninput="filterProducts()" />
+                            
+                            <!-- Dropdown de resultados filtrados -->
+                            <div id="search-results" class="hidden absolute left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-xl z-50 scrollbar-thin">
+                                <!-- Llenado dinámico JS -->
+                            </div>
+                        </div>
+
+                        <!-- Configurar ítem a agregar -->
+                        <div class="bg-slate-50 dark:bg-slate-900/40 p-3 rounded-lg border border-slate-200 dark:border-slate-800 space-y-2">
+                            <div class="text-xs font-bold text-slate-400">ÍTEM SELECCIONADO:</div>
+                            <div id="selected-product-info" class="text-xs text-slate-500 font-semibold italic">Ningún producto seleccionado</div>
+                            
+                            <input type="hidden" id="selected-product-id" />
+                            <input type="hidden" id="selected-product-code" />
+                            <input type="hidden" id="selected-product-desc" />
+                            <input type="hidden" id="selected-product-brand" />
+
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-[10px] font-semibold text-slate-400">Cant.</label>
+                                    <input type="number" id="temp-quantity" min="1" value="1" class="w-full bg-white dark:bg-slate-900 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-800 rounded px-2 py-1 text-xs focus:outline-none" />
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-semibold text-slate-400">Costo Unit (USD)</label>
+                                    <input type="number" id="temp-cost" min="0" value="50000" class="w-full bg-white dark:bg-slate-900 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-800 rounded px-2 py-1 text-xs focus:outline-none" />
+                                </div>
+                            </div>
+                            
+                            <button type="button" onclick="addToDraft()" class="w-full bg-slate-200 dark:bg-slate-800 hover:bg-pesco-blue hover:text-white text-slate-700 dark:text-slate-300 py-1.5 rounded font-bold text-xs transition-colors">
+                                Añadir al Lote Borrador
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Listado Borrador / Carrito de Envío (2 de 3 columnas) -->
+            <div class="bg-pesco-cardLight dark:bg-pesco-cardDark border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-lg flex flex-col justify-between transition-colors duration-300 lg:col-span-2">
+                <form method="POST" id="submit-draft-form" class="h-full flex flex-col justify-between">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add_request_list" />
+                    <input type="hidden" name="request_items_json" id="request_items_json" />
+                    
+                    <div>
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-md font-bold text-slate-800 dark:text-slate-100 flex items-center space-x-2">
+                                <span class="w-2.5 h-4 bg-pesco-blue rounded-full"></span>
+                                <span>Lote Borrador de Solicitud</span>
+                            </h3>
+                            <button type="button" onclick="clearDraft()" class="text-xs text-pesco-red hover:underline">Limpiar Lote</button>
+                        </div>
+                        
+                        <div class="overflow-x-auto max-h-48 scrollbar-thin">
+                            <table class="w-full text-xs text-left">
+                                <thead class="bg-slate-50 dark:bg-slate-900/50 text-slate-400 font-semibold">
+                                    <tr>
+                                        <th class="py-2 px-3">Marca / SKU</th>
+                                        <th class="py-2 px-3">Descripción</th>
+                                        <th class="py-2 px-3 text-right">Cantidad</th>
+                                        <th class="py-2 px-3 text-right">Unitario (USD)</th>
+                                        <th class="py-2 px-3 text-right">Total</th>
+                                        <th class="py-2 px-3 text-center">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="draft-table-body" class="divide-y divide-slate-200 dark:divide-slate-800">
+                                    <tr>
+                                        <td colspan="6" class="py-8 text-center text-slate-400 italic">No hay ítems en el lote borrador. Usa el buscador a la izquierda.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Campos del remitente y envío final -->
+                    <div class="border-t border-slate-200 dark:border-slate-800 pt-4 mt-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div class="w-full sm:w-1/2">
+                            <label class="block text-xs font-semibold text-slate-400 mb-1">Tu Nombre (Solicitante)</label>
+                            <input type="text" name="requested_by" required placeholder="Ej: Juan Pérez (Ventas)" class="w-full bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pesco-blue" />
+                        </div>
+                        <div class="w-full sm:w-auto self-end">
+                            <button type="submit" class="w-full sm:w-auto bg-pesco-blue hover:bg-pesco-blueHover text-white px-6 py-2.5 rounded-lg font-bold text-sm shadow-md transition-colors">
+                                Enviar Solicitud Consolidada
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+        </section>
+
+        <!-- Bandeja de Solicitudes Emitidas (Solo lectura para el solicitante) -->
+        <section class="bg-pesco-cardLight dark:bg-pesco-cardDark border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-lg transition-colors duration-300">
+            <h3 class="text-md font-bold mb-3 text-slate-800 dark:text-slate-100 flex items-center space-x-2">
+                <span class="w-2.5 h-4 bg-pesco-blue rounded-full"></span>
+                <span>Estado de mis Solicitudes Enviadas</span>
+            </h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-xs text-left">
+                    <thead class="bg-slate-50 dark:bg-slate-900/50 text-slate-400 font-semibold uppercase">
+                        <tr>
+                            <th class="py-2.5 px-3">Fecha</th>
+                            <th class="py-2.5 px-3">Marca / SKU</th>
+                            <th class="py-2.5 px-3 text-right">Cant.</th>
+                            <th class="py-2.5 px-3 text-right">Unitario</th>
+                            <th class="py-2.5 px-3 text-right">Total USD</th>
+                            <th class="py-2.5 px-3 text-center">Estado S&OP</th>
+                            <th class="py-2.5 px-3">Respuesta del Planificador</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
+                        {% for req in active_requests %}
+                        <tr>
+                            <td class="py-2.5 px-3 text-slate-500">{{ req.created_at|date:"d M Y H:i" }}</td>
+                            <td class="py-2.5 px-3 text-slate-650">
+                                <span class="bg-slate-200 dark:bg-slate-800 px-1 py-0.5 rounded text-[10px] font-bold mr-1 text-slate-500">{{ req.product.brand.code }}</span>
+                                <strong>{{ req.product.item_code }}</strong>
+                                <span class="block text-[10px] text-slate-400 mt-0.5">{{ req.product.description|truncatechars:45 }}</span>
+                            </td>
+                            <td class="py-2.5 px-3 text-right font-bold text-slate-800 dark:text-white">{{ req.quantity }}</td>
+                            <td class="py-2.5 px-3 text-right text-slate-500">${{ req.unit_cost_usd|floatformat:0 }}</td>
+                            <td class="py-2.5 px-3 text-right font-bold text-pesco-blue">${{ req.total_cost_usd|floatformat:0 }}</td>
+                            <td class="py-2.5 px-3 text-center">
+                                {% if req.status == 'PENDIENTE' %}
+                                <span class="px-2 py-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-950/30 dark:text-yellow-400 rounded-full font-bold">Pendiente</span>
+                                {% elif req.status == 'APROBADO' %}
+                                <span class="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-950/30 dark:text-green-400 rounded-full font-bold">Aprobado</span>
+                                {% else %}
+                                <span class="px-2 py-1 bg-red-100 text-red-800 dark:bg-red-950/30 dark:text-red-400 rounded-full font-bold">Rechazado</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-2.5 px-3">
+                                {% if req.planned_date %}
+                                <span class="block text-slate-700 dark:text-slate-300 font-semibold">Compra programada: <strong class="text-emerald-500">{{ req.planned_date }}</strong></span>
+                                {% endif %}
+                                {% if req.decision_note %}
+                                <span class="block text-[10px] text-slate-400 italic">"{{ req.decision_note }}"</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td class="py-6 text-center text-slate-400" colspan="7">No has enviado solicitudes aún.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        {% endif %}
+
+    </main>
+
+    <!-- Base de datos de productos en JS -->
+    <script>
+        const allProducts = [
+            {% for prod in products %}
+            {
+                id: "{{ prod.id }}",
+                code: "{{ prod.item_code|escapejs }}",
+                desc: "{{ prod.description|escapejs }}",
+                brand: "{{ prod.brand.code|escapejs }}"
+            },
+            {% endfor %}
+        ];
+
+        let draftItems = [];
+
+        function filterProducts() {
+            const input = document.getElementById('sku-search').value.toLowerCase().trim();
+            const resultsDiv = document.getElementById('search-results');
+            
+            if (input.length < 2) {
+                resultsDiv.classList.add('hidden');
+                return;
+            }
+
+            const filtered = allProducts.filter(p => 
+                p.code.toLowerCase().includes(input) || 
+                p.desc.toLowerCase().includes(input)
+            ).slice(0, 10);
+
+            if (filtered.length === 0) {
+                resultsDiv.innerHTML = '<div class="p-3 text-xs text-slate-400 italic">No se encontraron productos</div>';
+            } else {
+                resultsDiv.innerHTML = filtered.map(p => `
+                    <div onclick="selectProduct('${p.id}', '${p.code}', '${p.desc}', '${p.brand}')" class="p-2.5 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer text-xs border-b border-slate-100 dark:border-slate-800">
+                        <span class="bg-blue-100 dark:bg-blue-900 text-pesco-blue font-bold px-1 py-0.5 rounded text-[10px] mr-1.5">${p.brand}</span>
+                        <strong class="text-slate-800 dark:text-white">${p.code}</strong> - <span class="text-slate-500">${p.desc}</span>
+                    </div>
+                `).join('');
+            }
+            resultsDiv.classList.remove('hidden');
+        }
+
+        function selectProduct(id, code, desc, brand) {
+            document.getElementById('selected-product-id').value = id;
+            document.getElementById('selected-product-code').value = code;
+            document.getElementById('selected-product-desc').value = desc;
+            document.getElementById('selected-product-brand').value = brand;
+
+            document.getElementById('selected-product-info').innerHTML = `
+                <span class="bg-blue-100 dark:bg-blue-950/40 text-pesco-blue px-1.5 py-0.5 rounded text-[10px] font-bold mr-1">${brand}</span>
+                <strong>${code}</strong> - <span class="text-slate-650">${desc}</span>
+            `;
+
+            document.getElementById('search-results').classList.add('hidden');
+            document.getElementById('sku-search').value = '';
+        }
+
+        function addToDraft() {
+            const id = document.getElementById('selected-product-id').value;
+            const code = document.getElementById('selected-product-code').value;
+            const desc = document.getElementById('selected-product-desc').value;
+            const brand = document.getElementById('selected-product-brand').value;
+            const qty = parseInt(document.getElementById('temp-quantity').value);
+            const cost = parseFloat(document.getElementById('temp-cost').value);
+
+            if (!id) {
+                alert('Por favor, busca y selecciona un producto primero.');
+                return;
+            }
+            if (isNaN(qty) || qty <= 0) {
+                alert('Ingresa una cantidad válida.');
+                return;
+            }
+
+            const existing = draftItems.find(item => item.product_id === id);
+            if (existing) {
+                existing.quantity += qty;
+            } else {
+                draftItems.push({
+                    product_id: id,
+                    code: code,
+                    desc: desc,
+                    brand: brand,
+                    quantity: qty,
+                    unit_cost: cost
+                });
+            }
+
+            renderDraft();
+
+            document.getElementById('selected-product-id').value = '';
+            document.getElementById('selected-product-info').innerText = 'Ningún producto seleccionado';
+        }
+
+        function renderDraft() {
+            const tbody = document.getElementById('draft-table-body');
+            const hiddenInput = document.getElementById('request_items_json');
+
+            if (draftItems.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="py-8 text-center text-slate-400 italic">No hay ítems en el lote borrador. Usa el buscador a la izquierda.</td>
+                    </tr>
+                `;
+                hiddenInput.value = '';
+                return;
+            }
+
+            tbody.innerHTML = draftItems.map((item, idx) => `
+                <tr class="border-b border-slate-100 dark:border-slate-800">
+                    <td class="py-2 px-3 text-slate-650">
+                        <span class="bg-slate-200 dark:bg-slate-800 px-1 py-0.5 rounded text-[10px] font-bold mr-1 text-slate-500">${item.brand}</span>
+                        <strong>${item.code}</strong>
+                    </td>
+                    <td class="py-2 px-3 text-slate-500 text-[11px]">${item.desc}</td>
+                    <td class="py-2 px-3 text-right font-bold text-slate-700 dark:text-white">${item.quantity}</td>
+                    <td class="py-2 px-3 text-right text-slate-450">$${item.unit_cost.toLocaleString('es-ES')}</td>
+                    <td class="py-2 px-3 text-right font-bold text-pesco-blue">$${(item.quantity * item.unit_cost).toLocaleString('es-ES')}</td>
+                    <td class="py-2 px-3 text-center">
+                        <button type="button" onclick="removeFromDraft(${idx})" class="text-pesco-red hover:underline font-semibold">Quitar</button>
+                    </td>
+                </tr>
+            `).join('');
+
+            hiddenInput.value = JSON.stringify(draftItems);
+        }
+
+        function removeFromDraft(index) {
+            draftItems.splice(index, 1);
+            renderDraft();
+        }
+
+        function clearDraft() {
+            draftItems = [];
+            renderDraft();
+        }
+
+        function filterSkuTable() {
+            const query = document.getElementById('sku-table-search').value.toLowerCase().trim();
+            const rows = document.querySelectorAll('.sku-row-item');
+            
+            let visibleRows = [];
+            rows.forEach(row => {
+                const skuCode = row.getAttribute('data-sku').toLowerCase();
+                const skuDesc = row.getAttribute('data-desc').toLowerCase();
+                
+                if (skuCode.includes(query) || skuDesc.includes(query)) {
+                    row.classList.remove('hidden');
+                    visibleRows.push(row);
+                } else {
+                    row.classList.add('hidden');
+                }
+            });
+
+            // Si el buscador está vacío, volvemos a la vista consolidada global
+            if (query === '') {
+                resetToGlobal();
+                return;
+            }
+
+            // Si hay un único resultado coincidente o si se escribe un SKU exacto, actualizamos el Dashboard al instante
+            if (visibleRows.length === 1) {
+                const matchedSku = visibleRows[0].getAttribute('data-sku');
+                loadSkuFiche(matchedSku);
+            } else {
+                // Buscamos si hay una coincidencia exacta por código
+                const exactMatch = Array.from(rows).find(row => row.getAttribute('data-sku').toLowerCase() === query);
+                if (exactMatch) {
+                    loadSkuFiche(exactMatch.getAttribute('data-sku'));
+                }
+            }
+        }
+
+        document.addEventListener('click', function(e) {
+            const results = document.getElementById('search-results');
+            if (e.target.id !== 'sku-search' && results) {
+                results.classList.add('hidden');
+            }
+        });
+    </script>
+
+    <!-- Base de datos de SKUs estructurada en JS para redibujar el dashboard (Visualización SKU a SKU) -->
+    {% if success and metrics %}
+    <script>
+        const skuDb = {
+            {% for sku in metrics.skus %}
+            "{{ sku.code }}": {
+                description: "{{ sku.description|escapejs }}",
+                family: "{{ sku.family|escapejs }}",
+                subfamily: "{{ sku.subfamily|escapejs }}",
+                origin: "{{ sku.origin|escapejs }}",
+                demand: {
+                    delivered_12m_val: {{ sku.demand.delivered_12m_val|default:0 }},
+                    delivered_12m_qty: {{ sku.demand.delivered_12m_qty|default:0 }},
+                    delivered_2026_val: {{ sku.demand.delivered_2026_val|default:0 }},
+                    delivered_2026_qty: {{ sku.demand.delivered_2026_qty|default:0 }},
+                    backlog_val: {{ sku.demand.backlog_val|default:0 }},
+                    backlog_qty: {{ sku.demand.backlog_qty|default:0 }},
+                    cotizado_val: 0.0,
+                    cotizado_qty: 0,
+                    budget_val: {{ sku.demand.budget_val|default:0 }},
+                    budget_qty: {{ sku.demand.budget_qty|default:0 }},
+                    rotation_months: {{ sku.demand.rotation_months|default:0 }},
+                    rotation_with_purchase_months: {{ sku.demand.rotation_with_purchase_months|default:0 }}
+                },
+                inventory: {
+                    stock_val: {{ sku.inventory.stock_val|default:0 }},
+                    stock_qty: {{ sku.inventory.stock_qty|default:0 }},
+                    transit_real_val: {{ sku.inventory.transit_real_val|default:0 }},
+                    transit_real_qty: {{ sku.inventory.transit_real_qty|default:0 }},
+                    transit_proj_val: {{ sku.inventory.transit_proj_val|default:0 }},
+                    transit_proj_qty: {{ sku.inventory.transit_proj_qty|default:0 }},
+                    process_val: {{ sku.inventory.process_val|default:0 }},
+                    process_qty: {{ sku.inventory.process_qty|default:0 }},
+                    initial_inventory_val: {{ sku.inventory.initial_inventory_val|default:0 }},
+                    initial_inventory_qty: {{ sku.inventory.initial_inventory_qty|default:0 }},
+                    backlog_minus_val: {{ sku.inventory.backlog_minus_val|default:0 }},
+                    backlog_minus_qty: {{ sku.inventory.backlog_minus_qty|default:0 }},
+                    final_inventory_val: {{ sku.inventory.final_inventory_val|default:0 }},
+                    final_inventory_qty: {{ sku.inventory.final_inventory_qty|default:0 }},
+                    purchase_val: {{ sku.inventory.purchase_val|default:0 }},
+                    purchase_qty: {{ sku.inventory.purchase_qty|default:0 }},
+                    final_projected_val: {{ sku.inventory.final_projected_val|default:0 }},
+                    final_projected_qty: {{ sku.inventory.final_projected_qty|default:0 }}
+                }
+            },
+            {% endfor %}
+        };
+
+        const globalBackup = {
+            demand: {
+                delivered_12m_val: {{ metrics.global.demand.delivered_12m_val|default:0 }},
+                delivered_12m_qty: {{ metrics.global.demand.delivered_12m_qty|default:0 }},
+                delivered_2026_val: {{ metrics.global.demand.delivered_2026_val|default:0 }},
+                delivered_2026_qty: {{ metrics.global.demand.delivered_2026_qty|default:0 }},
+                backlog_val: {{ metrics.global.demand.backlog_val|default:0 }},
+                backlog_qty: {{ metrics.global.demand.backlog_qty|default:0 }},
+                cotizado_val: {{ metrics.global.demand.cotizado_val|default:0 }},
+                cotizado_qty: {{ metrics.global.demand.cotizado_qty|default:0 }},
+                budget_val: {{ metrics.global.demand.budget_val|default:0 }},
+                budget_qty: {{ metrics.global.demand.budget_qty|default:0 }},
+                budget_compliance_qty: {{ metrics.global.demand.budget_compliance_qty|default:0 }},
+                budget_compliance_val: {{ metrics.global.demand.budget_compliance_val|default:0 }},
+                rotation_months: {{ metrics.global.demand.rotation_months|default:0 }},
+                rotation_with_purchase_months: {{ metrics.global.demand.rotation_with_purchase_months|default:0 }}
+            },
+            inventory: {
+                stock_val: {{ metrics.global.inventory.stock_val|default:0 }},
+                stock_qty: {{ metrics.global.inventory.stock_qty|default:0 }},
+                transit_real_val: {{ metrics.global.inventory.transit_real_val|default:0 }},
+                transit_real_qty: {{ metrics.global.inventory.transit_real_qty|default:0 }},
+                transit_proj_val: {{ metrics.global.inventory.transit_proj_val|default:0 }},
+                transit_proj_qty: {{ metrics.global.inventory.transit_proj_qty|default:0 }},
+                process_val: {{ metrics.global.inventory.process_val|default:0 }},
+                process_qty: {{ metrics.global.inventory.process_qty|default:0 }},
+                initial_inventory_val: {{ metrics.global.inventory.initial_inventory_val|default:0 }},
+                initial_inventory_qty: {{ metrics.global.inventory.initial_inventory_qty|default:0 }},
+                backlog_minus_val: {{ metrics.global.inventory.backlog_minus_val|default:0 }},
+                backlog_minus_qty: {{ metrics.global.inventory.backlog_minus_qty|default:0 }},
+                final_inventory_val: {{ metrics.global.inventory.final_inventory_val|default:0 }},
+                final_inventory_qty: {{ metrics.global.inventory.final_inventory_qty|default:0 }},
+                purchase_val: {{ metrics.global.inventory.purchase_val|default:0 }},
+                purchase_qty: {{ metrics.global.inventory.purchase_qty|default:0 }},
+                final_projected_val: {{ metrics.global.inventory.final_projected_val|default:0 }},
+                final_projected_qty: {{ metrics.global.inventory.final_projected_qty|default:0 }}
+            }
+        };
+
+        // Cambia la vista del dashboard principal para mostrar los datos de un SKU específico
+        function loadSkuFiche(sku) {
+            const data = skuDb[sku];
+            if (!data) return;
+
+            // Cambiar textos y títulos
+            document.getElementById('dashboard-title').innerText = `Métricas Individuales S&OP - SKU: ${sku}`;
+            document.getElementById('btn-back-global').classList.remove('hidden');
+
+            document.getElementById('central-brand-badge').innerText = sku;
+            document.getElementById('central-sub-badge').innerText = data.description.substring(0, 20);
+
+            // Re-llenar Tabla de Demanda
+            document.getElementById('cell-del-12m-val').innerText = data.demand.delivered_12m_val.toLocaleString('es-ES');
+            document.getElementById('cell-del-12m-qty').innerText = data.demand.delivered_12m_qty;
+            document.getElementById('cell-del-2026_val').innerText = data.demand.delivered_2026_val.toLocaleString('es-ES');
+            document.getElementById('cell-del-2026_qty').innerText = data.demand.delivered_2026_qty;
+            document.getElementById('cell-backlog-val').innerText = data.demand.backlog_val.toLocaleString('es-ES');
+            document.getElementById('cell-backlog-qty').innerText = data.demand.backlog_qty;
+            document.getElementById('cell-cotizado-val').innerText = "0";
+            document.getElementById('cell-cotizado-qty').innerText = "0";
+            document.getElementById('cell-budget-val').innerText = data.demand.budget_val.toLocaleString('es-ES');
+            document.getElementById('cell-budget-qty').innerText = data.demand.budget_qty;
+
+            // Cumplimiento
+            const compQty = data.demand.budget_qty > 0 ? (data.demand.delivered_2026_qty / data.demand.budget_qty * 100).toFixed(2) : "0.00";
+            const compVal = data.demand.budget_val > 0 ? (data.demand.delivered_2026_val / data.demand.budget_val * 100).toFixed(2) : "0.00";
+            document.getElementById('cell-compliance-qty').innerText = `${compQty}%`;
+            document.getElementById('cell-compliance-val').innerText = `${compVal}%`;
+
+            document.getElementById('cell-rot-std').innerText = `${data.demand.rotation_months} meses`;
+            document.getElementById('cell-rot-pur').innerText = `${data.demand.rotation_with_purchase_months} meses`;
+
+            // Re-llenar Tabla de Suministro
+            document.getElementById('cell-stock-val').innerText = data.inventory.stock_val.toLocaleString('es-ES');
+            document.getElementById('cell-stock-qty').innerText = data.inventory.stock_qty;
+            document.getElementById('cell-transit-val').innerText = data.inventory.transit_real_val.toLocaleString('es-ES');
+            document.getElementById('cell-transit-qty').innerText = data.inventory.transit_real_qty;
+            document.getElementById('cell-transit-proj-val').innerText = data.inventory.transit_proj_val.toLocaleString('es-ES');
+            document.getElementById('cell-transit-proj-qty').innerText = data.inventory.transit_proj_qty;
+            document.getElementById('cell-process-val').innerText = data.inventory.process_val.toLocaleString('es-ES');
+            document.getElementById('cell-process-qty').innerText = data.inventory.process_qty;
+            document.getElementById('cell-init-val').innerText = data.inventory.initial_inventory_val.toLocaleString('es-ES');
+            document.getElementById('cell-init-qty').innerText = data.inventory.initial_inventory_qty;
+            document.getElementById('cell-backlog-minus-val').innerText = data.inventory.backlog_minus_val.toLocaleString('es-ES');
+            document.getElementById('cell-backlog-minus-qty').innerText = data.inventory.backlog_minus_qty;
+            document.getElementById('cell-final-val').innerText = data.inventory.final_inventory_val.toLocaleString('es-ES');
+            document.getElementById('cell-final-qty').innerText = data.inventory.final_inventory_qty;
+            document.getElementById('cell-purchase-val').innerText = data.inventory.purchase_val.toLocaleString('es-ES');
+            document.getElementById('cell-purchase-qty').innerText = data.inventory.purchase_qty;
+            document.getElementById('cell-proj-val').innerText = data.inventory.final_projected_val.toLocaleString('es-ES');
+            document.getElementById('cell-proj-qty').innerText = data.inventory.final_projected_qty;
+
+            // Hacemos scroll suave hasta el dashboard
+            document.getElementById('consolidated-dashboard').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Restablece el dashboard principal a los consolidados totales
+        function resetToGlobal() {
+            document.getElementById('dashboard-title').innerText = "Consolidado General S&OP - Marca HIAB";
+            document.getElementById('btn-back-global').classList.add('hidden');
+
+            document.getElementById('central-brand-badge').innerText = "HIAB";
+            document.getElementById('central-sub-badge').innerText = "Línea Activa";
+
+            document.getElementById('cell-del-12m-val').innerText = globalBackup.demand.delivered_12m_val.toLocaleString('es-ES');
+            document.getElementById('cell-del-12m-qty').innerText = globalBackup.demand.delivered_12m_qty;
+            document.getElementById('cell-del-2026_val').innerText = globalBackup.demand.delivered_2026_val.toLocaleString('es-ES');
+            document.getElementById('cell-del-2026_qty').innerText = globalBackup.demand.delivered_2026_qty;
+            document.getElementById('cell-backlog-val').innerText = globalBackup.demand.backlog_val.toLocaleString('es-ES');
+            document.getElementById('cell-backlog-qty').innerText = globalBackup.demand.backlog_qty;
+            document.getElementById('cell-cotizado-val').innerText = globalBackup.demand.cotizado_val.toLocaleString('es-ES');
+            document.getElementById('cell-cotizado-qty').innerText = globalBackup.demand.cotizado_qty;
+            document.getElementById('cell-budget-val').innerText = globalBackup.demand.budget_val.toLocaleString('es-ES');
+            document.getElementById('cell-budget-qty').innerText = globalBackup.demand.budget_qty;
+
+            document.getElementById('cell-compliance-qty').innerText = `${globalBackup.demand.budget_compliance_qty.toFixed(2)}%`;
+            document.getElementById('cell-compliance-val').innerText = `${globalBackup.demand.budget_compliance_val.toFixed(2)}%`;
+
+            document.getElementById('cell-rot-std').innerText = `${globalBackup.demand.rotation_months} meses`;
+            document.getElementById('cell-rot-pur').innerText = `${globalBackup.demand.rotation_with_purchase_months.toFixed(2)} meses`;
+
+            document.getElementById('cell-stock-val').innerText = globalBackup.inventory.stock_val.toLocaleString('es-ES');
+            document.getElementById('cell-stock-qty').innerText = globalBackup.inventory.stock_qty;
+            document.getElementById('cell-transit-val').innerText = globalBackup.inventory.transit_real_val.toLocaleString('es-ES');
+            document.getElementById('cell-transit-qty').innerText = globalBackup.inventory.transit_real_qty;
+            document.getElementById('cell-transit-proj-val').innerText = globalBackup.inventory.transit_proj_val.toLocaleString('es-ES');
+            document.getElementById('cell-transit-proj-qty').innerText = globalBackup.inventory.transit_proj_qty;
+            document.getElementById('cell-process-val').innerText = globalBackup.inventory.process_val.toLocaleString('es-ES');
+            document.getElementById('cell-process-qty').innerText = globalBackup.inventory.process_qty;
+            document.getElementById('cell-init-val').innerText = globalBackup.inventory.initial_inventory_val.toLocaleString('es-ES');
+            document.getElementById('cell-init-qty').innerText = globalBackup.inventory.initial_inventory_qty;
+            document.getElementById('cell-backlog-minus-val').innerText = globalBackup.inventory.backlog_minus_val.toLocaleString('es-ES');
+            document.getElementById('cell-backlog-minus-qty').innerText = globalBackup.inventory.backlog_minus_qty;
+            document.getElementById('cell-final-val').innerText = globalBackup.inventory.final_inventory_val.toLocaleString('es-ES');
+            document.getElementById('cell-final-qty').innerText = globalBackup.inventory.final_inventory_qty;
+            document.getElementById('cell-purchase-val').innerText = globalBackup.inventory.purchase_val.toLocaleString('es-ES');
+            document.getElementById('cell-purchase-qty').innerText = globalBackup.inventory.purchase_qty;
+            document.getElementById('cell-proj-val').innerText = globalBackup.inventory.final_projected_val.toLocaleString('es-ES');
+            document.getElementById('cell-proj-qty').innerText = globalBackup.inventory.final_projected_qty;
+        }
+    </script>
+
+    <!-- Script de Inicialización de Gráficos -->
+    <script>
+        const ctxInventory = document.getElementById('inventoryChart').getContext('2d');
+        new Chart(ctxInventory, {
+            type: 'doughnut',
+            data: {
+                labels: ['Stock Físico', 'Tránsito Real', 'Tránsito Proyectado', 'En Proceso'],
+                datasets: [{
+                    data: [
+                        {{ metrics.global.inventory.stock_qty }}, 
+                        {{ metrics.global.inventory.transit_real_qty }}, 
+                        {{ metrics.global.inventory.transit_proj_qty }}, 
+                        {{ metrics.global.inventory.process_qty }}
+                    ],
+                    backgroundColor: ['#00A8FF', '#10B981', '#F59E0B', '#6366F1'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: document.documentElement.classList.contains('dark') ? '#94A3B8' : '#475569',
+                            font: { family: 'Outfit' }
+                        }
+                    }
+                }
+            }
+        });
+
+        const ctxDemand = document.getElementById('demandChart').getContext('2d');
+        new Chart(ctxDemand, {
+            type: 'bar',
+            data: {
+                labels: ['Histórico 12M', 'Entregado 2026', 'Backlog', 'Presupuesto Meta'],
+                datasets: [{
+                    label: 'Unidades',
+                    data: [
+                        {{ metrics.global.demand.delivered_12m_qty }}, 
+                        {{ metrics.global.demand.delivered_2026_qty }}, 
+                        {{ metrics.global.demand.backlog_qty }}, 
+                        {{ metrics.global.demand.budget_qty }}
+                    ],
+                    backgroundColor: ['#64748B', '#00A8FF', '#E30613', '#10B981'],
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        grid: { color: 'rgba(148, 163, 184, 0.1)' },
+                        ticks: { color: '#94A3B8' }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#94A3B8' }
+                    }
+                }
+            }
+        });
+    </script>
+    {% endif %}
+
+    <!-- Script de Theme Toggle -->
+    <script>
+        const themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
+        const themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
+
+        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            themeToggleLightIcon.classList.remove('hidden');
+            document.documentElement.classList.add('dark');
+        } else {
+            themeToggleDarkIcon.classList.remove('hidden');
+            document.documentElement.classList.remove('dark');
+        }
+
+        const themeToggleBtn = document.getElementById('theme-toggle');
+
+        themeToggleBtn.addEventListener('click', function() {
+            themeToggleDarkIcon.classList.toggle('hidden');
+            themeToggleLightIcon.classList.toggle('hidden');
+
+            if (localStorage.getItem('color-theme')) {
+                if (localStorage.getItem('color-theme') === 'light') {
+                    document.documentElement.classList.add('dark');
+                    localStorage.setItem('color-theme', 'dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.setItem('color-theme', 'light');
+                }
+            } else {
+                if (document.documentElement.classList.contains('dark')) {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.setItem('color-theme', 'light');
+                } else {
+                    document.documentElement.classList.add('dark');
+                    localStorage.setItem('color-theme', 'dark');
+                }
+            }
+        });
+    </script>
+</body>
+</html>
